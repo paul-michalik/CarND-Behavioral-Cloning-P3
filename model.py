@@ -33,7 +33,7 @@ def model_99linessteering(input_shape, use_saved_state=None):
     model.add(Dropout(0.5))
 
     model.add(Dense(1, activation='linear'))
-    model.compile(loss='mse', optimizer="adam")
+    #model.compile(loss='mse', optimizer="adam")
 
     return model
 
@@ -117,3 +117,7 @@ def model_nvidia(input_shape, use_saved_state=None):
     # plot(model, to_file='model.png', show_shapes=True)
 
     return model
+
+row, col, depth = 320, 160, 3
+model = model_99linessteering((row, col, depth))
+model.compile(loss='mse', optimizer="adam")
