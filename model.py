@@ -1,16 +1,22 @@
-import csv, random, numpy as np, pandas as pd
-import keras as keras
+import csv, random, os, cv2 as cv2, numpy as np
 from keras.models import Sequential
-from keras.layers import Dense, Dropout, Flatten
+from keras.layers import Dense, Dropout, Flatten, Lambda
 from keras.layers.convolutional import Convolution2D, MaxPooling2D
 from keras.preprocessing.image import img_to_array, load_img, flip_axis, random_shift
+from sklearn.model_selection import train_test_split
+from sklearn.utils import shuffle
 
-def model_99linessteering(input_shape, use_saved_state=None):
-    if use_saved_state: return keras.models.load_model(use_saved_state)
-    
-    dropout_rate = 0.5
+def model_input_layer(model, input_shape, cropping, preprocess_func):
+    model.add(Cropping2D(cropping=cropping, input_shape=input_shape))
+    model.add(Lambda(preprocess_func, input_shape=input_shape))
+    return model
+
+def model_99linessteering(input_shape, cropping, preprocess_func): 
+    sdropout_rate = 0.5
 
     model = Sequential()
+    model = model_input_layer(model, input_shape, cropping, preprocess_func)
+
     model.add(Convolution2D(32, 3, 3, activation='elu', input_shape=input_shape))
     model.add(MaxPooling2D())
 
@@ -38,14 +44,12 @@ def model_99linessteering(input_shape, use_saved_state=None):
 
     return model
 
-def model_nvidia(input_shape, use_saved_state=None):
-    if use_saved_state: return keras.models.load_model(use_saved_state)
-
+def model_nvidia(input_shape, cropping=((70, 25), (0, 0))):
     dropout_rate = 0.4
     initial_distribution = 'normal'
 
     model = Sequential()
-
+    model = model_input_layer(model, input_shape, cropping, preprocess_func)
     model.add(BatchNormalization(mode=1, 
                                  axis=-1, 
                                  weights=None, 
@@ -101,10 +105,7 @@ def model_nvidia(input_shape, use_saved_state=None):
     return model
 
 def preprocess_image(image):
-    return image
-
-from sklearn.model_selection import train_test_split
-import csv
+    return (image / 255.0) - 0.5
 
 def import_and_split_csv_data(data_path):
     data = []
@@ -119,15 +120,10 @@ def import_and_split_csv_data(data_path):
                     ,random_state = 1)
     return training_data, validation_data
 
-import cv2
-import numpy as np
-import sklearn
-import os
-
-def data_generator(samples, batch_size=32):
+def batched_sample_generator(samples, batch_size=32):
     num_samples = len(samples)
     while 1: # Loop forever so the generator never terminates
-        sklearn.utils.shuffle(samples)
+        shuffle(samples)
         for offset in range(0, num_samples, batch_size):
             batch_samples = samples[offset:offset+batch_size]
             images = []
@@ -139,15 +135,15 @@ def data_generator(samples, batch_size=32):
                 images.append(center_image)
                 angles.append(center_angle)
 
-            # trim image to only see section with road
-
             X_data = np.array(images)
             y_data = np.array(angles)
-            yield sklearn.utils.shuffle(X_data, y_data)
+            yield shuffle(X_data, y_data)
             
 #main
 
 #row, col, depth = 320, 160, 3
+#cropping = ((70, 25), (0, 0))
+#preprocess_func = lambda x: (x / 255.0) - 0.5)
 
 #model = model_99linessteering((row, col, depth))
 #model.compile(loss='mse', optimizer="adam")
@@ -155,7 +151,10 @@ def data_generator(samples, batch_size=32):
 
 train_data, val_data = import_and_split_csv_data('./data/driving_log.csv')
 
-train_data_gen = data_generator(train_data)
-for i in range(10):
+train_data_gen, val_data_gen = batched_sample_generator(train_data), batched_sample_generator(val_data)
+
+for i in range(100):
     X, y = next(train_data_gen)
-    print(np.shape(X), np.shape(y))
+    print("{}: {}, {}".format(i, np.shape(X), np.shape(y)))
+
+
