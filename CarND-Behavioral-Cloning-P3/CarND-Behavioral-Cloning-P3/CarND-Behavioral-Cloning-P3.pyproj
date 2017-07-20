@@ -32,9 +32,6 @@
     <Compile Include="..\..\model.py">
       <Link>model.py</Link>
     </Compile>
-    <Compile Include="..\..\set_cwd.py">
-      <Link>set_cwd.py</Link>
-    </Compile>
     <Compile Include="..\..\video.py">
       <Link>video.py</Link>
     </Compile>
