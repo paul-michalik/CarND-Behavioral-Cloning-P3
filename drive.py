@@ -47,6 +47,14 @@ controller = SimplePIController(0.1, 0.002)
 set_speed = 25
 controller.set_desired(set_speed)
 
+#import cv2 as cv2
+#import math
+
+def resize_image(image):
+    #shape = image.shape
+    #image = image[math.floor(shape[0]/4):shape[0]-25, 0:shape[1]]
+    #image = cv2.resize(image,(100, 100), interpolation=cv2.INTER_AREA)
+    return image
 
 @sio.on('telemetry')
 def telemetry(sid, data):
@@ -61,6 +69,9 @@ def telemetry(sid, data):
         imgString = data["image"]
         image = Image.open(BytesIO(base64.b64decode(imgString)))
         image_array = np.asarray(image)
+
+        image_array = resize_image(image_array)
+
         steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
 
         throttle = controller.update(float(speed))

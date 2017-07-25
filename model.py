@@ -7,6 +7,13 @@ from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 from keras.models import load_model
 
+def resize(image, target_shape):
+    from keras.backend import tf as ktf
+    return ktf.image.resize_images(image, target_shape)
+
+def normalize(image):
+    return (image / 255.0) - 0.5
+
 def model_input_layer(model, input_shape, cropping, preprocess_func):
     model.add(Cropping2D(cropping=cropping, input_shape=input_shape))
     model.add(Lambda(preprocess_func, input_shape=input_shape))
@@ -18,19 +25,19 @@ def model_99linessteering(input_shape, cropping, preprocess_func):
     model = Sequential()
     model = model_input_layer(model, input_shape, cropping, preprocess_func)
 
-    model.add(Convolution2D(32, 3, 3, activation='elu', input_shape=input_shape))
+    model.add(Convolution2D(32, 2, 2, activation='elu', input_shape=input_shape))
     model.add(MaxPooling2D())
 
-    model.add(Convolution2D(32, 3, 3, activation='elu'))
+    model.add(Convolution2D(32, 2, 2, activation='elu'))
     model.add(MaxPooling2D())
 
-    model.add(Convolution2D(32, 3, 3, activation='elu'))
+    model.add(Convolution2D(32, 2, 2, activation='elu'))
     model.add(MaxPooling2D())
 
-    model.add(Convolution2D(64, 3, 3, activation='elu'))
+    model.add(Convolution2D(64, 2, 2, activation='elu'))
     model.add(MaxPooling2D())
 
-    model.add(Convolution2D(128, 3, 3, activation='elu'))
+    model.add(Convolution2D(128, 2, 2, activation='elu'))
     model.add(MaxPooling2D())
 
     model.add(Flatten())
@@ -105,25 +112,24 @@ def model_nvidia(input_shape, cropping, preprocess_func):
 
     return model
 
-def preprocess_image(image):
-    return (image / 255.0) - 0.5
-
 def import_and_split_csv_data(data_path, steering_corr, train_size):
     X, y = [], []
     with open(data_path) as file:
         reader = csv.reader(file)
         next(reader)
         for center, left, right, steering, throttle, brake, speed in reader:
-            #X += [center, left, right]
-            #y += [float(steering),
-            #      float(steering) + steering_corr, 
-            #      float(steering) - steering_corr]
+            if abs(float(steering)) <= 0.05 and random.randint(0, 9) <= 4:
+                continue
+            X += [center, left, right]
+            y += [float(steering),
+                  float(steering) + steering_corr, 
+                  float(steering) - steering_corr]
             #X += [center]
             #y += [float(steering)]
             #X += [left]
             #y += [float(steering) + steering_corr]
-            X += [right]
-            y += [float(steering) - steering_corr]
+            #X += [right]
+            #y += [float(steering) - steering_corr]
             
         return train_test_split(X, y, train_size = train_size, random_state = 1)
 
@@ -195,18 +201,25 @@ def draw_history(history):
 #main
 
 row, col, depth = 160, 320, 3
-cropping = ((40, 25), (0, 0))
+cropping = ((60, 25), (0, 0))
+trow, tcol = 64, 64
 batch_size = 32
-epochs = 5
+epochs = 3
 
-model_99 = model_99linessteering((row, col, depth), cropping, preprocess_image)
+def preprocess(img):
+    return normalize(resize(img, (trow, tcol)))
+
+model_99 = model_99linessteering(input_shape=(row, col, depth), 
+                                 cropping=cropping,
+                                 preprocess_func=normalize)
 model_99.compile(loss='mse', optimizer="adam")
 model_99.summary()
 model_99, history = train_model(model_99,
-                                steering_corr=0.,#0.05,
+                                steering_corr=0.05,
                                 train_size=0.8,
                                 batch_size=batch_size, 
                                 epochs=epochs,
                                 verbose=2)
 model_99.save('model_99.h5')
+    
 

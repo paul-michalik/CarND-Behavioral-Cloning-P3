@@ -1,11 +1,4 @@
-""""
-With admiration for and inspiration from:
-    https://github.com/dolaameng/Udacity-SDC_Behavior-Cloning/
-    https://devblogs.nvidia.com/parallelforall/deep-learning-self-driving-cars/
-    https://chatbotslife.com/using-augmentation-to-mimic-human-driving-496b569760a9
-    https://www.reddit.com/r/MachineLearning/comments/5qbjz7/p_an_autonomous_vehicle_steering_model_in_99/dcyphps/
-Accompanies the blog post at https://medium.com/@harvitronix/training-a-deep-learning-model-to-steer-a-car-in-99-lines-of-code-ba94e0456e6a
-"""
+
 import csv, random, numpy as np
 from keras.models import load_model, Sequential
 from keras.layers import Dense, Dropout, Flatten
@@ -37,7 +30,9 @@ def get_X_y(data_file):
     X, y = [], []
     steering_offset = 0.4
     with open(data_file) as fin:
-        for _, left_img, right_img, steering_angle, _, _, speed in csv.reader(fin):
+        reader = csv.reader(fin)
+        next(reader)
+        for _, left_img, right_img, steering_angle, _, _, speed in reader:
             if float(speed) < 20: continue  # throw away low-speed samples
             X += [left_img.strip(), right_img.strip()]
             y += [float(steering_angle) + steering_offset, float(steering_angle) - steering_offset]
@@ -83,7 +78,7 @@ def _generator(batch_size, X, y):
         for i in range(batch_size):
             sample_index = random.randint(0, len(X) - 1)
             sa = y[sample_index]
-            image, sa = process_image(X[sample_index], sa, augment=True)
+            image, sa = process_image('./data/IMG/' + X[sample_index].split('/')[-1], sa, augment=True)
             batch_X.append(image)
             batch_y.append(sa)
         yield np.array(batch_X), np.array(batch_y)
@@ -95,5 +90,5 @@ def train():
     net.fit_generator(_generator(256, X, y), samples_per_epoch=20224, nb_epoch=2)
     net.save('model_99.h5')
 
-if __name__ == '__main__':
+#if __name__ == '__main__':
     train()
