@@ -3,6 +3,7 @@
 
 data
 windows_sim
+run1
 *.zip
 
 
@@ -264,3 +265,4 @@ paket-files/
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
 *.pyc
+

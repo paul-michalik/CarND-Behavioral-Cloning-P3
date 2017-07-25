@@ -118,18 +118,19 @@ def import_and_split_csv_data(data_path, steering_corr, train_size):
         reader = csv.reader(file)
         next(reader)
         for center, left, right, steering, throttle, brake, speed in reader:
-            if abs(float(steering)) <= 0.05 and random.randint(0, 9) <= 4:
+            steering_angle = float(steering)
+            # remove half of angles less than 0.1
+            if abs(steering_angle) <= 0.1 and random.randint(0, 9) <= 4:
                 continue
-            X += [center, left, right]
-            y += [float(steering),
-                  float(steering) + steering_corr, 
-                  float(steering) - steering_corr]
-            #X += [center]
-            #y += [float(steering)]
-            #X += [left]
-            #y += [float(steering) + steering_corr]
-            #X += [right]
-            #y += [float(steering) - steering_corr]
+
+            X += [center]
+            y += [steering_angle]
+
+            # only add left and right camera images if angles > 0.2
+            if abs(steering_angle) > 0.1:
+                X += [left, right]
+                y += [float(steering) + steering_corr, 
+                      float(steering) - steering_corr]
             
         return train_test_split(X, y, train_size = train_size, random_state = 1)
 
@@ -198,28 +199,34 @@ def draw_history(history):
     plt.legend(['training set', 'validation set'], loc='upper right')
     plt.show()
 
-#main
-
-row, col, depth = 160, 320, 3
-cropping = ((60, 25), (0, 0))
-trow, tcol = 64, 64
-batch_size = 32
-epochs = 3
-
 def preprocess(img):
     return normalize(resize(img, (trow, tcol)))
 
-model_99 = model_99linessteering(input_shape=(row, col, depth), 
-                                 cropping=cropping,
-                                 preprocess_func=normalize)
-model_99.compile(loss='mse', optimizer="adam")
-model_99.summary()
-model_99, history = train_model(model_99,
-                                steering_corr=0.05,
-                                train_size=0.8,
-                                batch_size=batch_size, 
-                                epochs=epochs,
-                                verbose=2)
-model_99.save('model_99.h5')
+def train_model():
+    row, col, depth = 160, 320, 3
+    cropping = ((60, 25), (0, 0))
+    trow, tcol = 64, 64
+    batch_size = 32
+    epochs = 3
+
+    
+    model_99 = model_99linessteering(input_shape=(row, col, depth), 
+                                     cropping=cropping,
+                                     preprocess_func=normalize)
+    model_99.compile(loss='mse', optimizer="adam")
+    
+    model_99, history = train_model(model_99,
+                                    steering_corr=0.2,
+                                    train_size=0.8,
+                                    batch_size=batch_size, 
+                                    epochs=epochs,
+                                    verbose=2)
+    
+
+if __name__ == '__main__':
+    model_99.summary()
+    model_99.save('model_99.h5')
+
+
     
 
